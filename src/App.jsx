@@ -7,6 +7,10 @@ import {
 import { apiGet, apiPost, toRecordMap, localConfig } from "./api.js";
 import logoImg from "./logo.png";
 
+// URL Web App Apps Script bawaan — OPD tidak perlu mengisi ini secara manual.
+// Tombol Settings (⚙️) di header tetap tersedia untuk mengganti sumber data bila diperlukan.
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxYXaN6FxqVs9A7VYLvRLYAj_6EWf0gTUEHtvQzalCrK8ofmE1X2Q1vaIVPjBn_ZKjM/exec";
+
 // ---------- Konstanta tampilan ----------
 const STATUS_OPTIONS = [
   { value: "belum", label: "Belum Ada Progres", color: "#B3453A" },
@@ -587,7 +591,7 @@ function ConfigScreen({ initialValue, onSubmit, error, loading }) {
 // ---------- App shell ----------
 export default function App() {
   const [tab, setTab] = useState("dashboard");
-  const [apiUrl, setApiUrl] = useState(localConfig.get());
+  const [apiUrl, setApiUrl] = useState(localConfig.get() || DEFAULT_API_URL);
   const [loading, setLoading] = useState(false);
   const [configError, setConfigError] = useState("");
   const [loadError, setLoadError] = useState("");
