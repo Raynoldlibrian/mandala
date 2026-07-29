@@ -39,3 +39,20 @@ export const localConfig = {
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
   },
 };
+
+// Status OPD yang sudah berhasil memasukkan kode akses — tersimpan di sessionStorage,
+// jadi otomatis terhapus begitu browser/tab ditutup.
+const UNLOCK_KEY = "mandala_unlocked_opds";
+export const unlockStore = {
+  getAll() {
+    try { return JSON.parse(sessionStorage.getItem(UNLOCK_KEY) || "[]"); } catch { return []; }
+  },
+  isUnlocked(opd) {
+    return this.getAll().includes(opd);
+  },
+  unlock(opd) {
+    const list = this.getAll();
+    if (!list.includes(opd)) list.push(opd);
+    try { sessionStorage.setItem(UNLOCK_KEY, JSON.stringify(list)); } catch {}
+  },
+};

@@ -2,9 +2,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import {
   Building2, ClipboardCheck, LayoutDashboard, ChevronDown, LinkIcon, Check,
-  CircleDot, Bell, X, ExternalLink, AlertTriangle, Loader2, Settings, RefreshCw,
+  CircleDot, Bell, X, ExternalLink, AlertTriangle, Loader2, Settings, RefreshCw, Lock,
 } from "lucide-react";
-import { apiGet, apiPost, toRecordMap, localConfig } from "./api.js";
+import { apiGet, apiPost, toRecordMap, localConfig, unlockStore } from "./api.js";
 import logoImg from "./logo.png";
 
 // URL Web App Apps Script bawaan — OPD tidak perlu mengisi ini secara manual.
@@ -111,17 +111,70 @@ function ListRow({ onClick, left, right, flagged }) {
   );
 }
 
+// ---------- Gerbang kode akses OPD ----------
+function AccessGate({ opd, onVerifyAccess, onUnlocked }) {
+  const [pin, setPin] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    setError("");
+    setChecking(true);
+    try {
+      const valid = await onVerifyAccess(opd, pin);
+      if (valid) {
+        unlockStore.unlock(opd);
+        onUnlocked();
+      } else {
+        setError("Kode akses salah, coba lagi.");
+        setPin("");
+      }
+    } catch (err) {
+      setError(err.message || "Gagal memeriksa kode akses.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div style={{ background: "#fff", border: `1px solid ${LINE}`, borderRadius: 10, padding: "32px 24px", textAlign: "center", maxWidth: 340, margin: "20px auto" }}>
+      <div style={{ width: 44, height: 44, borderRadius: "50%", background: PRIMARY_SOFT, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+        <Lock size={19} color={PRIMARY} />
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: INK, marginBottom: 4 }}>{opd}</div>
+      <div style={{ fontSize: 12.5, color: "#7A776C", marginBottom: 18 }}>Masukkan kode akses OPD untuk mulai mengisi progres.</div>
+      <input
+        value={pin}
+        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 4) handleSubmit(); }}
+        placeholder="••••"
+        inputMode="numeric"
+        maxLength={4}
+        style={{ width: 120, textAlign: "center", letterSpacing: 8, fontSize: 20, fontWeight: 700, border: `1px solid ${LINE}`, borderRadius: 8, padding: "10px 0", color: INK, marginBottom: 14 }}
+      />
+      {error && <div style={{ color: RED, fontSize: 12.5, marginBottom: 12 }}>{error}</div>}
+      <PrimaryButton disabled={pin.length !== 4 || checking} onClick={handleSubmit}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        {checking && <Loader2 size={15} style={{ animation: "spin 0.8s linear infinite" }} />}
+        {checking ? "Memeriksa..." : "Buka Akses"}
+      </PrimaryButton>
+    </div>
+  );
+}
+
 // ---------- Input OPD (list + modal) ----------
-function InputOPDScreen({ records, opdList, tahunList, currentYear, onSubmitProgres }) {
+function InputOPDScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, onVerifyAccess }) {
   const [opd, setOpd] = useState("");
   const [tahun, setTahun] = useState(currentYear);
   const [activeKode, setActiveKode] = useState(null);
+  const [, forceUpdate] = useState(0);
 
   const list = useMemo(
     () => Object.values(records).filter((r) => r.opd === opd && r.tahun === tahun && r.verifikasi !== "sesuai"),
     [records, opd, tahun]
   );
   const active = activeKode ? records[activeKode] : null;
+  const unlocked = opd && unlockStore.isUnlocked(opd);
 
   return (
     <div style={{ maxWidth: 560 }}>
@@ -135,9 +188,14 @@ function InputOPDScreen({ records, opdList, tahunList, currentYear, onSubmitProg
       </div>
 
       {!opd && <div style={{ color: "#9A9788", fontSize: 13.5, padding: "20px 0" }}>Pilih OPD untuk menampilkan daftar rekomendasi.</div>}
-      {opd && list.length === 0 && <div style={{ color: "#9A9788", fontSize: 13.5, padding: "20px 0" }}>Tidak ada rekomendasi untuk OPD dan tahun ini.</div>}
 
-      {opd && list.length > 0 && (
+      {opd && !unlocked && (
+        <AccessGate opd={opd} onVerifyAccess={onVerifyAccess} onUnlocked={() => forceUpdate((n) => n + 1)} />
+      )}
+
+      {opd && unlocked && list.length === 0 && <div style={{ color: "#9A9788", fontSize: 13.5, padding: "20px 0" }}>Tidak ada rekomendasi untuk OPD dan tahun ini.</div>}
+
+      {opd && unlocked && list.length > 0 && (
         <div>
           <div style={{ fontSize: 12.5, fontWeight: 600, color: "#7A776C", marginBottom: 10 }}>
             Daftar Rekomendasi ({list.length}) — klik untuk mengisi progres
@@ -644,6 +702,11 @@ export default function App() {
     }
   }
 
+  async function verifyAccess(opd, pin) {
+    const res = await apiGet(apiUrl, "verifyAccess", { opd, pin });
+    return !!res.valid;
+  }
+
   async function submitProgres(record, patch) {
     await apiPost(apiUrl, "submitProgres", {
       kode_rekomendasi: record.kode,
@@ -682,7 +745,7 @@ export default function App() {
       <div style={{ background: PRIMARY, color: "#fff", padding: "18px 24px", display: "flex", alignItems: "center", gap: 16 }}>
         <img src={logoImg} alt="Logo MANDALA" style={{ width: 74, height: 74, borderRadius: 10, background: "#FBF8EF", flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.3 }}>MANDALA</div>
+          <div style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.2 }}>MANDALA</div>
           <div style={{ fontSize: 13, color: "#D7E6E1", marginTop: 2, lineHeight: 1.3 }}>Monitoring Pelaksanaan Tindak Lanjut</div>
           <div style={{ fontSize: 12, fontStyle: "italic", color: "#9FC3B8", marginTop: 2, lineHeight: 1.3 }}>Pusat kendali tindak lanjut, wujudkan SAKIP berkualitas</div>
         </div>
@@ -725,7 +788,7 @@ export default function App() {
             )}
             {tab === "input" && (
               <InputOPDScreen records={records} opdList={opdList} tahunList={tahunList} currentYear={currentYear}
-                onSubmitProgres={submitProgres} />
+                onSubmitProgres={submitProgres} onVerifyAccess={verifyAccess} />
             )}
             {tab === "verifikasi" && (
               <VerifikasiScreen records={records} apipList={apipList} onSubmitVerifikasi={submitVerifikasi} />
