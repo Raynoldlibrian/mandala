@@ -568,7 +568,7 @@ function ConfigScreen({ initialValue, onSubmit, error, loading }) {
       <div style={{ maxWidth: 420, width: "100%", background: "#fff", border: `1px solid ${LINE}`, borderRadius: 10, padding: 28 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
           <img src={logoImg} alt="Logo MANDALA" style={{ width: 40, height: 40, borderRadius: 8, background: "#FBF8EF" }} />
-          <div style={{ fontSize: 17, fontWeight: 700, color: INK }}>MANDALA</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: INK }}>MANDALA</div>
         </div>
         <div style={{ fontSize: 12.5, color: "#7A776C", marginBottom: 18, lineHeight: 1.5 }}>
           Tempel URL Web App Apps Script (berakhiran <code>/exec</code>) untuk menyambungkan aplikasi ini ke Google Sheet.
