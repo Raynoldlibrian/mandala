@@ -682,7 +682,7 @@ export default function App() {
       <div style={{ background: PRIMARY, color: "#fff", padding: "18px 24px", display: "flex", alignItems: "center", gap: 16 }}>
         <img src={logoImg} alt="Logo MANDALA" style={{ width: 74, height: 74, borderRadius: 10, background: "#FBF8EF", flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}>MANDALA</div>
+          <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.3 }}>MANDALA</div>
           <div style={{ fontSize: 13, color: "#D7E6E1", marginTop: 2, lineHeight: 1.3 }}>Monitoring Pelaksanaan Tindak Lanjut</div>
           <div style={{ fontSize: 12, fontStyle: "italic", color: "#9FC3B8", marginTop: 2, lineHeight: 1.3 }}>Pusat kendali tindak lanjut, wujudkan SAKIP berkualitas</div>
         </div>
