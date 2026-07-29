@@ -19,9 +19,9 @@ const STATUS_OPTIONS = [
 ];
 
 const VERIF_OPTIONS = [
-  { value: "sesuai", label: "Sesuai" },
-  { value: "perlu", label: "Perlu Perbaikan" },
-  { value: "ditolak", label: "Ditolak" },
+  { value: "sesuai", label: "Sesuai Rekomendasi" },
+  { value: "perlu", label: "Belum Sesuai Rekomendasi" },
+  { value: "ditolak", label: "Belum Di-TL" },
 ];
 
 const INK = "#1F2A28";
