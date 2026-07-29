@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 import {
   Building2, ClipboardCheck, LayoutDashboard, ChevronDown, LinkIcon, Check,
   CircleDot, Bell, X, ExternalLink, AlertTriangle, Loader2, Settings, RefreshCw, Lock,
+  BookOpen, ClipboardList, BarChart3, FileText, ShieldCheck, ChevronRight,
 } from "lucide-react";
 import { apiGet, apiPost, toRecordMap, localConfig, unlockStore } from "./api.js";
 import logoImg from "./logo.png";
@@ -428,6 +429,108 @@ function DetailModal({ record, onClose, onEdit }) {
   );
 }
 
+// ---------- Kamus ----------
+const KOMPONEN_ORDER = [
+  { key: "Perencanaan Kinerja", icon: ClipboardList },
+  { key: "Pengukuran Kinerja", icon: BarChart3 },
+  { key: "Pelaporan Kinerja", icon: FileText },
+  { key: "Evaluasi Akuntabilitas Kinerja Internal", icon: ShieldCheck },
+];
+
+function KamusDetailModal({ item, onClose }) {
+  return (
+    <Modal title="Detail Kamus" onClose={onClose}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: 13.5 }}>
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#7A776C", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>Rekomendasi</div>
+          <div style={{ color: INK, fontWeight: 600, lineHeight: 1.5 }}>{item.rekomendasi}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#7A776C", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>Keterangan / Catatan Tindak Lanjut</div>
+          <div style={{ color: "#514E43", lineHeight: 1.6 }}>{item.keterangan || "—"}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#7A776C", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>Bukti Dukung</div>
+          <div style={{ background: GOLD_SOFT, border: `1px solid ${GOLD}`, borderRadius: 6, padding: "10px 12px", color: "#8A5A15", lineHeight: 1.5 }}>
+            {item.bukti_dukung || "—"}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function KamusScreen({ kamusList }) {
+  const [expanded, setExpanded] = useState(null);
+  const [activeItem, setActiveItem] = useState(null);
+
+  const grouped = useMemo(() => {
+    const map = {};
+    (kamusList || []).forEach((k) => {
+      const key = (k.komponen_sakip || "Lainnya").trim();
+      map[key] = map[key] || [];
+      map[key].push(k);
+    });
+    return map;
+  }, [kamusList]);
+
+  const orderedKeys = useMemo(() => {
+    const known = KOMPONEN_ORDER.map((k) => k.key).filter((k) => grouped[k]);
+    const extra = Object.keys(grouped).filter((k) => !KOMPONEN_ORDER.some((o) => o.key === k));
+    return [...known, ...extra];
+  }, [grouped]);
+
+  if (!kamusList || kamusList.length === 0) {
+    return (
+      <div style={{ color: "#9A9788", fontSize: 13.5, padding: "40px 0", textAlign: "center" }}>
+        Kamus belum berisi data. Hubungi admin untuk melengkapi panduan tindak lanjut.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: 720 }}>
+      {orderedKeys.map((key) => {
+        const meta = KOMPONEN_ORDER.find((k) => k.key === key);
+        const Icon = meta?.icon || BookOpen;
+        const items = grouped[key];
+        const isOpen = expanded === key;
+        return (
+          <div key={key} style={{ marginBottom: 14 }}>
+            <button onClick={() => setExpanded(isOpen ? null : key)} style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 14, textAlign: "left",
+              background: "#fff", border: `1px solid ${isOpen ? PRIMARY : LINE}`, borderRadius: 10,
+              padding: "16px 18px", cursor: "pointer",
+            }}>
+              <div style={{ width: 40, height: 40, borderRadius: 9, background: PRIMARY_SOFT, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={18} color={PRIMARY} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: INK }}>{key}</div>
+                <div style={{ fontSize: 12, color: "#7A776C", marginTop: 1 }}>{items.length} rekomendasi</div>
+              </div>
+              <ChevronRight size={18} color="#9A9788" style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+            </button>
+
+            {isOpen && (
+              <div style={{ paddingTop: 10, paddingLeft: 4 }}>
+                {items.map((item, idx) => (
+                  <ListRow key={idx} onClick={() => setActiveItem(item)}
+                    left={<div style={{ fontSize: 13.5, color: INK, maxWidth: 560 }}>{item.rekomendasi}</div>}
+                    right={<ChevronRight size={15} color="#B7B3A3" style={{ flexShrink: 0, marginLeft: 12 }} />}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {activeItem && <KamusDetailModal item={activeItem} onClose={() => setActiveItem(null)} />}
+    </div>
+  );
+}
+
 // ---------- Dashboard ----------
 function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, goToVerifikasi }) {
   const [filterOpd, setFilterOpd] = useState("");
@@ -658,6 +761,7 @@ export default function App() {
   const [opdList, setOpdList] = useState([]);
   const [tahunList, setTahunList] = useState([]);
   const [apipList, setApipList] = useState([]);
+  const [kamusList, setKamusList] = useState([]);
   const [records, setRecords] = useState({});
 
   const currentYear = tahunList.length ? tahunList[tahunList.length - 1] : "";
@@ -670,13 +774,15 @@ export default function App() {
     setLoading(true);
     setLoadError("");
     try {
-      const [opdData, apipData, recordsData] = await Promise.all([
+      const [opdData, apipData, recordsData, kamusData] = await Promise.all([
         apiGet(url, "opd"),
         apiGet(url, "apip"),
         apiGet(url, "records"),
+        apiGet(url, "kamus"),
       ]);
       setOpdList(opdData.map((o) => o.nama_opd));
       setApipList(apipData.map((a) => a.nama_verifikator));
+      setKamusList(kamusData);
       const tahunSet = Array.from(new Set(recordsData.map((r) => r.tahun))).sort();
       setTahunList(tahunSet);
       setRecords(toRecordMap(recordsData));
@@ -733,6 +839,7 @@ export default function App() {
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "input", label: "Input OPD", icon: Building2 },
     { key: "verifikasi", label: "Verifikasi APIP", icon: ClipboardCheck },
+    { key: "kamus", label: "Kamus", icon: BookOpen },
   ];
 
   if (!apiUrl || showConfig) {
@@ -793,6 +900,7 @@ export default function App() {
             {tab === "verifikasi" && (
               <VerifikasiScreen records={records} apipList={apipList} onSubmitVerifikasi={submitVerifikasi} />
             )}
+            {tab === "kamus" && <KamusScreen kamusList={kamusList} />}
           </>
         )}
       </div>
