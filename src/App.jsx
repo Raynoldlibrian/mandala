@@ -12,6 +12,25 @@ import logoImg from "./logo.png";
 // Tombol Settings (⚙️) di header tetap tersedia untuk mengganti sumber data bila diperlukan.
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxYXaN6FxqVs9A7VYLvRLYAj_6EWf0gTUEHtvQzalCrK8ofmE1X2Q1vaIVPjBn_ZKjM/exec";
 
+const INSTANSI = "Bagian Organisasi Sekretariat Daerah Kabupaten Indragiri Hulu";
+const FOOTER_TEXT = "Raynold — Bagian Organisasi Setda — 2026";
+
+const GLOBAL_STYLE = `
+  *, *::before, *::after { box-sizing: border-box; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .mdl-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mdl-nav-btn { flex-shrink: 0; white-space: nowrap; }
+  @media (max-width: 560px) {
+    .mdl-header { padding: 14px 16px !important; gap: 12px !important; }
+    .mdl-logo { width: 52px !important; height: 52px !important; }
+    .mdl-title { font-size: 17px !important; }
+    .mdl-sub { font-size: 11.5px !important; }
+    .mdl-tag { font-size: 10.5px !important; }
+    .mdl-nav-btn { padding: 11px 14px !important; font-size: 12.5px !important; }
+    .mdl-header-actions { gap: 6px !important; }
+  }
+`;
+
 // ---------- Konstanta tampilan ----------
 const STATUS_OPTIONS = [
   { value: "belum", label: "Belum Ada Progres", color: "#B3453A" },
@@ -20,9 +39,9 @@ const STATUS_OPTIONS = [
 ];
 
 const VERIF_OPTIONS = [
-  { value: "sesuai", label: "Sesuai" },
-  { value: "perlu", label: "Perlu Perbaikan" },
-  { value: "ditolak", label: "Ditolak" },
+  { value: "sesuai", label: "Sudah Sesuai Rekomendasi" },
+  { value: "perlu", label: "Belum Sesuai Rekomendasi" },
+  { value: "ditolak", label: "Belum di_TL" },
 ];
 
 const INK = "#1F2A28";
@@ -562,9 +581,9 @@ function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitPro
   const verifDitolak = filtered.filter((r) => r.verifikasi === "ditolak").length;
   const verifBelum = total - verifSesuai - verifPerlu - verifDitolak;
   const verifPieData = [
-    { name: "Sesuai", value: verifSesuai, color: "#3C7A5F" },
-    { name: "Perlu Perbaikan", value: verifPerlu, color: "#C9962F" },
-    { name: "Ditolak", value: verifDitolak, color: RED },
+    { name: "Sudah Sesuai Rekomendasi", value: verifSesuai, color: "#3C7A5F" },
+    { name: "Belum Sesuai Rekomendasi", value: verifPerlu, color: "#C9962F" },
+    { name: "Belum di_TL", value: verifDitolak, color: RED },
     { name: "Belum Diverifikasi", value: verifBelum, color: "#B7B3A3" },
   ];
 
@@ -726,6 +745,7 @@ function ConfigScreen({ initialValue, onSubmit, error, loading }) {
   const [value, setValue] = useState(initialValue || "");
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: PAPER, fontFamily: "'Manrope', 'Segoe UI', sans-serif" }}>
+      <style>{GLOBAL_STYLE}</style>
       <div style={{ maxWidth: 420, width: "100%", background: "#fff", border: `1px solid ${LINE}`, borderRadius: 10, padding: 28 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
           <img src={logoImg} alt="Logo MANDALA" style={{ width: 40, height: 40, borderRadius: 8, background: "#FBF8EF" }} />
@@ -848,28 +868,33 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "'Manrope', 'Segoe UI', sans-serif", background: PAPER, minHeight: "100vh", color: INK }}>
-      <style>{"@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }"}</style>
-      <div style={{ background: PRIMARY, color: "#fff", padding: "18px 24px", display: "flex", alignItems: "center", gap: 16 }}>
-        <img src={logoImg} alt="Logo MANDALA" style={{ width: 74, height: 74, borderRadius: 10, background: "#FBF8EF", flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.3 }}>MANDALA</div>
-          <div style={{ fontSize: 13, color: "#D7E6E1", marginTop: 2, lineHeight: 1.3 }}>Monitoring Pelaksanaan Tindak Lanjut</div>
-          <div style={{ fontSize: 12, fontStyle: "italic", color: "#9FC3B8", marginTop: 2, lineHeight: 1.3 }}>Pusat kendali tindak lanjut, wujudkan SAKIP berkualitas</div>
+      <style>{GLOBAL_STYLE}</style>
+      <div className="mdl-header" style={{ background: PRIMARY, color: "#fff", padding: "18px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <img src={logoImg} alt="Logo MANDALA" className="mdl-logo" style={{ width: 74, height: 74, borderRadius: 10, background: "#FBF8EF", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <div className="mdl-title" style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.2 }}>MANDALA</div>
+            <div className="mdl-sub" style={{ fontSize: 13, color: "#D7E6E1", marginTop: 2, lineHeight: 1.3 }}>Monitoring Pelaksanaan Tindak Lanjut</div>
+            <div className="mdl-tag" style={{ fontSize: 12, fontStyle: "italic", color: "#9FC3B8", marginTop: 2, lineHeight: 1.3 }}>Pusat kendali tindak lanjut, wujudkan SAKIP berkualitas</div>
+          </div>
+          <div className="mdl-header-actions" style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+            <button onClick={() => loadAll(apiUrl)} title="Muat ulang data" style={{ background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, padding: 9, cursor: "pointer", color: "#fff" }}>
+              <RefreshCw size={16} style={loading ? { animation: "spin 0.8s linear infinite" } : {}} />
+            </button>
+            <button onClick={() => setShowConfig(true)} title="Ganti URL API" style={{ background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, padding: 9, cursor: "pointer", color: "#fff" }}>
+              <Settings size={16} />
+            </button>
+          </div>
         </div>
-        <button onClick={() => loadAll(apiUrl)} title="Muat ulang data" style={{ background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, padding: 9, cursor: "pointer", color: "#fff" }}>
-          <RefreshCw size={16} style={loading ? { animation: "spin 0.8s linear infinite" } : {}} />
-        </button>
-        <button onClick={() => setShowConfig(true)} title="Ganti URL API" style={{ background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, padding: 9, cursor: "pointer", color: "#fff" }}>
-          <Settings size={16} />
-        </button>
+        <div className="mdl-instansi" style={{ fontSize: 10.5, color: "#B7CFC8", marginTop: 10, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{INSTANSI}</div>
       </div>
 
-      <div style={{ display: "flex", borderBottom: `1px solid ${LINE}`, background: "#fff" }}>
+      <div className="mdl-nav" style={{ display: "flex", borderBottom: `1px solid ${LINE}`, background: "#fff" }}>
         {NAV.map((n) => {
           const Icon = n.icon;
           const active = tab === n.key;
           return (
-            <button key={n.key} onClick={() => setTab(n.key)}
+            <button key={n.key} onClick={() => setTab(n.key)} className="mdl-nav-btn"
               style={{ display: "flex", alignItems: "center", gap: 7, padding: "13px 20px", fontSize: 13.5, fontWeight: 600, color: active ? PRIMARY : "#8A8778", background: "none", border: "none", cursor: "pointer", borderBottom: active ? `2px solid ${GOLD}` : "2px solid transparent" }}>
               <Icon size={15} /> {n.label}
             </button>
@@ -903,6 +928,10 @@ export default function App() {
             {tab === "kamus" && <KamusScreen kamusList={kamusList} />}
           </>
         )}
+      </div>
+
+      <div style={{ textAlign: "center", padding: "18px 16px", fontSize: 11.5, color: "#9A9788", borderTop: `1px solid ${LINE}` }}>
+        {FOOTER_TEXT}
       </div>
     </div>
   );
