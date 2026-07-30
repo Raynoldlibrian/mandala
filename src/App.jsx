@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 import {
   Building2, ClipboardCheck, LayoutDashboard, ChevronDown, LinkIcon, Check,
   CircleDot, Bell, X, ExternalLink, AlertTriangle, Loader2, Settings, RefreshCw, Lock,
-  BookOpen, ClipboardList, BarChart3, FileText, ShieldCheck, ChevronRight,
+  BookOpen, ClipboardList, BarChart3, FileText, ShieldCheck, ChevronRight, Download,
 } from "lucide-react";
 import { apiGet, apiPost, toRecordMap, localConfig, unlockStore } from "./api.js";
 import logoImg from "./logo.png";
@@ -575,11 +575,25 @@ function KamusScreen({ kamusList }) {
 }
 
 // ---------- Dashboard ----------
-function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, goToVerifikasi }) {
+function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, onCetakLaporan, goToVerifikasi }) {
   const [filterOpd, setFilterOpd] = useState("");
   const [filterTahun, setFilterTahun] = useState(currentYear);
   const [detailKode, setDetailKode] = useState(null);
   const [editKode, setEditKode] = useState(null);
+  const [cetakLoading, setCetakLoading] = useState(false);
+  const [cetakError, setCetakError] = useState("");
+
+  const handleCetak = async () => {
+    setCetakError("");
+    setCetakLoading(true);
+    try {
+      await onCetakLaporan(filterOpd, filterTahun);
+    } catch (err) {
+      setCetakError(err.message || "Gagal membuat laporan, coba lagi.");
+    } finally {
+      setCetakLoading(false);
+    }
+  };
 
   const all = Object.values(records);
   const filtered = useMemo(
@@ -661,7 +675,20 @@ function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitPro
           <div style={{ fontSize: 11.5, fontWeight: 600, color: "#7A776C", marginBottom: 5 }}>Tahun</div>
           <Select value={filterTahun} onChange={setFilterTahun} options={tahunList} placeholder="Semua tahun" />
         </div>
+        <div style={{ display: "flex", alignItems: "flex-end" }}>
+          <PrimaryButton disabled={!filterOpd || !filterTahun || cetakLoading} onClick={handleCetak}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px" }}>
+            {cetakLoading ? <Loader2 size={15} style={{ animation: "spin 0.8s linear infinite" }} /> : <Download size={15} />}
+            {cetakLoading ? "Membuat laporan..." : "Cetak Laporan"}
+          </PrimaryButton>
+        </div>
       </div>
+      {cetakError && (
+        <div style={{ color: RED, fontSize: 12.5, marginBottom: 12 }}>{cetakError}</div>
+      )}
+      {!filterOpd && (
+        <div style={{ color: "#9A9788", fontSize: 12, marginTop: -12, marginBottom: 16 }}>Pilih OPD tertentu dulu untuk mengaktifkan tombol Cetak Laporan.</div>
+      )}
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24 }}>
         <StatCard label="OPD Terpantau" value={opdRanking.length} />
@@ -880,6 +907,23 @@ export default function App() {
     await loadAll(apiUrl);
   }
 
+  async function cetakLaporan(opd, tahun) {
+    const res = await apiPost(apiUrl, "laporanOpd", { opd, tahun });
+    const byteChars = atob(res.fileBase64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = res.filename || "Laporan_MANDALA.docx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   const NAV = [
     { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { key: "input", label: "Input OPD", icon: Building2 },
@@ -898,7 +942,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <img src={logoImg} alt="Logo MANDALA" className="mdl-logo" style={{ width: 74, height: 74, borderRadius: 10, background: "#FBF8EF", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 160 }}>
-            <div className="mdl-title" style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.3 }}>MANDALA</div>
+            <div className="mdl-title" style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.2 }}>MANDALA</div>
             <div className="mdl-sub" style={{ fontSize: 13, color: "#D7E6E1", marginTop: 2, lineHeight: 1.3 }}>Monitoring Pelaksanaan Tindak Lanjut</div>
             <div className="mdl-tag" style={{ fontSize: 12, fontStyle: "italic", color: "#9FC3B8", marginTop: 2, lineHeight: 1.3 }}>Pusat kendali tindak lanjut, wujudkan SAKIP berkualitas</div>
           </div>
@@ -941,7 +985,7 @@ export default function App() {
           <>
             {tab === "dashboard" && (
               <DashboardScreen records={records} opdList={opdList} tahunList={tahunList} currentYear={currentYear}
-                onSubmitProgres={submitProgres} goToVerifikasi={() => setTab("verifikasi")} />
+                onSubmitProgres={submitProgres} onCetakLaporan={cetakLaporan} goToVerifikasi={() => setTab("verifikasi")} />
             )}
             {tab === "input" && (
               <InputOPDScreen records={records} opdList={opdList} tahunList={tahunList} currentYear={currentYear}
