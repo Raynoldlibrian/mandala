@@ -254,6 +254,7 @@ function InputModal({ record, onClose, onSave }) {
   const [status, setStatus] = useState(record.status || "");
   const [estimasi, setEstimasi] = useState(record.estimasi || "");
   const [link, setLink] = useState(record.link || "");
+  const [catatanOpd, setCatatanOpd] = useState(record.catatanOpd || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const needsRevision = record.verifikasi === "perlu" || record.verifikasi === "ditolak";
@@ -261,7 +262,7 @@ function InputModal({ record, onClose, onSave }) {
   const handleSave = () => {
     setError("");
     setSaving(true);
-    Promise.resolve(onSave({ status, estimasi, link }))
+    Promise.resolve(onSave({ status, estimasi, link, catatanOpd }))
       .catch((err) => setError(err.message || "Gagal menyimpan, coba lagi."))
       .finally(() => setSaving(false));
   };
@@ -288,7 +289,7 @@ function InputModal({ record, onClose, onSave }) {
         </Field>
       )}
 
-      <Field label="Link Bukti Dukung" hint="Tempel link folder/dokumen Google Drive yang dapat diakses.">
+      <Field label="Link Bukti Dukung" hint={status === "sesuai" ? "Wajib diisi untuk status Sesuai Target." : "Opsional — bisa dilengkapi belakangan kalau belum ada."}>
         <div style={{ position: "relative" }}>
           <LinkIcon size={15} style={{ position: "absolute", left: 12, top: 13, color: "#9A9788" }} />
           <input type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/…"
@@ -296,9 +297,14 @@ function InputModal({ record, onClose, onSave }) {
         </div>
       </Field>
 
+      <Field label="Catatan" hint="Opsional — jelaskan konteks tambahan untuk APIP, misalnya lokasi bukti atau progres yang sudah dilakukan.">
+        <textarea value={catatanOpd} onChange={(e) => setCatatanOpd(e.target.value)} rows={3}
+          style={{ width: "100%", border: `1px solid ${LINE}`, borderRadius: 6, padding: "11px 12px", fontSize: 14, color: INK, resize: "vertical", fontFamily: "inherit" }} />
+      </Field>
+
       {error && <div style={{ color: RED, fontSize: 12.5, marginBottom: 12 }}>{error}</div>}
 
-      <PrimaryButton disabled={!status || !link || (status === "proses" && !estimasi) || saving}
+      <PrimaryButton disabled={!status || (status === "proses" && !estimasi) || (status === "sesuai" && !link) || saving}
         onClick={handleSave} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
         {saving && <Loader2 size={15} style={{ animation: "spin 0.8s linear infinite" }} />}
         {saving ? "Menyimpan..." : "Kirim Progres"}
@@ -382,6 +388,12 @@ function VerifikasiModal({ record, verifikator, onClose, onSave }) {
               : <span style={{ color: RED }}>Belum dilampirkan</span>}
           </div>
         </div>
+        {record.catatanOpd && (
+          <div>
+            <span style={{ color: "#7A776C" }}>Catatan dari OPD</span>
+            <div style={{ color: "#514E43", lineHeight: 1.5, marginTop: 3 }}>{record.catatanOpd}</div>
+          </div>
+        )}
       </div>
 
       <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: 16 }}>
@@ -424,6 +436,9 @@ function DetailModal({ record, onClose, onEdit }) {
               : <span style={{ color: RED }}>Belum dilampirkan</span>}
           </div>
         </div>
+        {record.catatanOpd && (
+          <div><span style={{ color: "#7A776C" }}>Catatan dari OPD</span><div style={{ color: "#514E43", lineHeight: 1.5 }}>{record.catatanOpd}</div></div>
+        )}
         <div>
           <span style={{ color: "#7A776C" }}>Verifikasi APIP</span>
           <div style={{ marginTop: 3 }}>
@@ -474,6 +489,15 @@ function KamusDetailModal({ item, onClose }) {
             {item.bukti_dukung || "—"}
           </div>
         </div>
+        {item.link_contoh_format && (
+          <a href={item.link_contoh_format} target="_blank" rel="noreferrer" style={{
+            display: "inline-flex", alignItems: "center", gap: 7, alignSelf: "flex-start",
+            background: PRIMARY_SOFT, color: PRIMARY, fontWeight: 600, fontSize: 13,
+            padding: "9px 14px", borderRadius: 7, textDecoration: "none",
+          }}>
+            <LinkIcon size={14} /> Lihat Contoh Format <ExternalLink size={13} />
+          </a>
+        )}
       </div>
     </Modal>
   );
@@ -839,7 +863,8 @@ export default function App() {
       opd: record.opd,
       status: patch.status,
       estimasi_tanggal: patch.estimasi || "",
-      link_bukti: patch.link,
+      link_bukti: patch.link || "",
+      catatan_opd: patch.catatanOpd || "",
     });
     await loadAll(apiUrl);
   }
@@ -873,7 +898,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <img src={logoImg} alt="Logo MANDALA" className="mdl-logo" style={{ width: 74, height: 74, borderRadius: 10, background: "#FBF8EF", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 160 }}>
-            <div className="mdl-title" style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.3 }}>MANDALA</div>
+            <div className="mdl-title" style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.2 }}>MANDALA</div>
             <div className="mdl-sub" style={{ fontSize: 13, color: "#D7E6E1", marginTop: 2, lineHeight: 1.3 }}>Monitoring Pelaksanaan Tindak Lanjut</div>
             <div className="mdl-tag" style={{ fontSize: 12, fontStyle: "italic", color: "#9FC3B8", marginTop: 2, lineHeight: 1.3 }}>Pusat kendali tindak lanjut, wujudkan SAKIP berkualitas</div>
           </div>
