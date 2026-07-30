@@ -898,7 +898,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <img src={logoImg} alt="Logo MANDALA" className="mdl-logo" style={{ width: 74, height: 74, borderRadius: 10, background: "#FBF8EF", flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 160 }}>
-            <div className="mdl-title" style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.2 }}>MANDALA</div>
+            <div className="mdl-title" style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.3 }}>MANDALA</div>
             <div className="mdl-sub" style={{ fontSize: 13, color: "#D7E6E1", marginTop: 2, lineHeight: 1.3 }}>Monitoring Pelaksanaan Tindak Lanjut</div>
             <div className="mdl-tag" style={{ fontSize: 12, fontStyle: "italic", color: "#9FC3B8", marginTop: 2, lineHeight: 1.3 }}>Pusat kendali tindak lanjut, wujudkan SAKIP berkualitas</div>
           </div>
