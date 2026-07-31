@@ -183,7 +183,7 @@ function AccessGate({ opd, onVerifyAccess, onUnlocked }) {
 }
 
 // ---------- Input OPD (list + modal) ----------
-function InputOPDScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, onVerifyAccess }) {
+function InputOPDScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, onVerifyAccess, onBatalkan }) {
   const [opd, setOpd] = useState("");
   const [tahun, setTahun] = useState(currentYear);
   const [activeKode, setActiveKode] = useState(null);
@@ -244,19 +244,22 @@ function InputOPDScreen({ records, opdList, tahunList, currentYear, onSubmitProg
 
       {active && (
         <InputModal record={active} onClose={() => setActiveKode(null)}
-          onSave={(patch) => onSubmitProgres(active, patch).then(() => setActiveKode(null))} />
+          onSave={(patch) => onSubmitProgres(active, patch).then(() => setActiveKode(null))}
+          onCancelProgres={() => onBatalkan(active).then(() => setActiveKode(null))} />
       )}
     </div>
   );
 }
 
-function InputModal({ record, onClose, onSave }) {
+function InputModal({ record, onClose, onSave, onCancelProgres }) {
   const [status, setStatus] = useState(record.status || "");
   const [estimasi, setEstimasi] = useState(record.estimasi || "");
   const [link, setLink] = useState(record.link || "");
   const [catatanOpd, setCatatanOpd] = useState(record.catatanOpd || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const needsRevision = record.verifikasi === "perlu" || record.verifikasi === "ditolak";
 
   const handleSave = () => {
@@ -265,6 +268,14 @@ function InputModal({ record, onClose, onSave }) {
     Promise.resolve(onSave({ status, estimasi, link, catatanOpd }))
       .catch((err) => setError(err.message || "Gagal menyimpan, coba lagi."))
       .finally(() => setSaving(false));
+  };
+
+  const handleCancelConfirmed = () => {
+    setError("");
+    setCancelling(true);
+    Promise.resolve(onCancelProgres())
+      .catch((err) => setError(err.message || "Gagal membatalkan, coba lagi."))
+      .finally(() => setCancelling(false));
   };
 
   return (
@@ -309,6 +320,33 @@ function InputModal({ record, onClose, onSave }) {
         {saving && <Loader2 size={15} style={{ animation: "spin 0.8s linear infinite" }} />}
         {saving ? "Menyimpan..." : "Kirim Progres"}
       </PrimaryButton>
+
+      {record.submitted && (
+        <div style={{ marginTop: 14, borderTop: `1px solid ${LINE}`, paddingTop: 14 }}>
+          {!confirmCancel ? (
+            <button onClick={() => setConfirmCancel(true)} style={{ width: "100%", background: "none", border: "none", color: RED, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0" }}>
+              Batalkan Tindak Lanjut Ini
+            </button>
+          ) : (
+            <div>
+              <div style={{ fontSize: 12.5, color: "#7A776C", marginBottom: 10, textAlign: "center", lineHeight: 1.5 }}>
+                Yakin batalkan? Rekomendasi ini akan kembali ke status "Belum Ada Progres".
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setConfirmCancel(false)} disabled={cancelling}
+                  style={{ flex: 1, padding: "10px", borderRadius: 6, border: `1px solid ${LINE}`, background: "#fff", color: INK, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Batal
+                </button>
+                <button onClick={handleCancelConfirmed} disabled={cancelling}
+                  style={{ flex: 1, padding: "10px", borderRadius: 6, border: "none", background: RED, color: "#fff", fontSize: 13, fontWeight: 600, cursor: cancelling ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  {cancelling && <Loader2 size={14} style={{ animation: "spin 0.8s linear infinite" }} />}
+                  {cancelling ? "Membatalkan..." : "Ya, Batalkan"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }
@@ -575,7 +613,7 @@ function KamusScreen({ kamusList }) {
 }
 
 // ---------- Dashboard ----------
-function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, onCetakLaporan, goToVerifikasi }) {
+function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitProgres, onBatalkan, onCetakLaporan, goToVerifikasi }) {
   const [filterOpd, setFilterOpd] = useState("");
   const [filterTahun, setFilterTahun] = useState(currentYear);
   const [detailKode, setDetailKode] = useState(null);
@@ -785,7 +823,8 @@ function DashboardScreen({ records, opdList, tahunList, currentYear, onSubmitPro
 
       {editKode && records[editKode] && (
         <InputModal record={records[editKode]} onClose={() => setEditKode(null)}
-          onSave={(patch) => onSubmitProgres(records[editKode], patch).then(() => setEditKode(null))} />
+          onSave={(patch) => onSubmitProgres(records[editKode], patch).then(() => setEditKode(null))}
+          onCancelProgres={() => onBatalkan(records[editKode]).then(() => setEditKode(null))} />
       )}
     </div>
   );
@@ -907,6 +946,14 @@ export default function App() {
     await loadAll(apiUrl);
   }
 
+  async function batalkanTindakLanjut(record) {
+    await apiPost(apiUrl, "batalkanProgres", {
+      kode_rekomendasi: record.kode,
+      opd: record.opd,
+    });
+    await loadAll(apiUrl);
+  }
+
   async function cetakLaporan(opd, tahun) {
     const res = await apiPost(apiUrl, "laporanOpd", { opd, tahun });
     const byteChars = atob(res.fileBase64);
@@ -985,11 +1032,11 @@ export default function App() {
           <>
             {tab === "dashboard" && (
               <DashboardScreen records={records} opdList={opdList} tahunList={tahunList} currentYear={currentYear}
-                onSubmitProgres={submitProgres} onCetakLaporan={cetakLaporan} goToVerifikasi={() => setTab("verifikasi")} />
+                onSubmitProgres={submitProgres} onBatalkan={batalkanTindakLanjut} onCetakLaporan={cetakLaporan} goToVerifikasi={() => setTab("verifikasi")} />
             )}
             {tab === "input" && (
               <InputOPDScreen records={records} opdList={opdList} tahunList={tahunList} currentYear={currentYear}
-                onSubmitProgres={submitProgres} onVerifyAccess={verifyAccess} />
+                onSubmitProgres={submitProgres} onVerifyAccess={verifyAccess} onBatalkan={batalkanTindakLanjut} />
             )}
             {tab === "verifikasi" && (
               <VerifikasiScreen records={records} apipList={apipList} onSubmitVerifikasi={submitVerifikasi} />
