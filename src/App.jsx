@@ -416,7 +416,7 @@ function VerifikasiModal({ record, verifikator, onClose, onSave }) {
 }
 
 function DetailModal({ record, onClose, onEdit }) {
-  const canEdit = record.status !== "sesuai";
+  const canEdit = record.verifikasi !== "sesuai";
   return (
     <Modal title="Detail Tindak Lanjut" onClose={onClose}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20, fontSize: 13.5 }}>
