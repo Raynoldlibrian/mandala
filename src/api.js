@@ -56,3 +56,20 @@ export const unlockStore = {
     try { sessionStorage.setItem(UNLOCK_KEY, JSON.stringify(list)); } catch {}
   },
 };
+
+// Sama seperti unlockStore, tapi khusus untuk verifikator APIP yang sudah
+// memasukkan PIN mereka — disimpan terpisah biar tidak campur dengan nama OPD.
+const UNLOCK_KEY_APIP = "mandala_unlocked_apip";
+export const unlockStoreApip = {
+  getAll() {
+    try { return JSON.parse(sessionStorage.getItem(UNLOCK_KEY_APIP) || "[]"); } catch { return []; }
+  },
+  isUnlocked(nama) {
+    return this.getAll().includes(nama);
+  },
+  unlock(nama) {
+    const list = this.getAll();
+    if (!list.includes(nama)) list.push(nama);
+    try { sessionStorage.setItem(UNLOCK_KEY_APIP, JSON.stringify(list)); } catch {}
+  },
+};
