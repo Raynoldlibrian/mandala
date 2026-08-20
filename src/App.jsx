@@ -5,7 +5,7 @@ import {
   CircleDot, Bell, X, ExternalLink, AlertTriangle, Loader2, Settings, RefreshCw, Lock,
   BookOpen, ClipboardList, BarChart3, FileText, ShieldCheck, ChevronRight, Download,
 } from "lucide-react";
-import { apiGet, apiPost, toRecordMap, localConfig, unlockStore } from "./api.js";
+import { apiGet, apiPost, toRecordMap, localConfig, unlockStore, unlockStoreApip } from "./api.js";
 import logoImg from "./logo.png";
 
 // URL Web App Apps Script bawaan — OPD tidak perlu mengisi ini secara manual.
@@ -131,8 +131,8 @@ function ListRow({ onClick, left, right, flagged }) {
   );
 }
 
-// ---------- Gerbang kode akses OPD ----------
-function AccessGate({ opd, onVerifyAccess, onUnlocked }) {
+// ---------- Gerbang kode akses (dipakai untuk OPD maupun APIP) ----------
+function AccessGate({ opd, onVerifyAccess, onUnlocked, store = unlockStore, hint = "Masukkan kode akses OPD untuk mulai mengisi progres." }) {
   const [pin, setPin] = useState("");
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
@@ -143,7 +143,7 @@ function AccessGate({ opd, onVerifyAccess, onUnlocked }) {
     try {
       const valid = await onVerifyAccess(opd, pin);
       if (valid) {
-        unlockStore.unlock(opd);
+        store.unlock(opd);
         onUnlocked();
       } else {
         setError("Kode akses salah, coba lagi.");
@@ -162,7 +162,7 @@ function AccessGate({ opd, onVerifyAccess, onUnlocked }) {
         <Lock size={19} color={PRIMARY} />
       </div>
       <div style={{ fontSize: 14, fontWeight: 700, color: INK, marginBottom: 4 }}>{opd}</div>
-      <div style={{ fontSize: 12.5, color: "#7A776C", marginBottom: 18 }}>Masukkan kode akses OPD untuk mulai mengisi progres.</div>
+      <div style={{ fontSize: 12.5, color: "#7A776C", marginBottom: 18 }}>{hint}</div>
       <input
         value={pin}
         onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
@@ -352,11 +352,13 @@ function InputModal({ record, onClose, onSave, onCancelProgres }) {
 }
 
 // ---------- Verifikasi APIP (list + modal) ----------
-function VerifikasiScreen({ records, apipList, onSubmitVerifikasi }) {
+function VerifikasiScreen({ records, apipList, onSubmitVerifikasi, onVerifyApipAccess }) {
   const [verifikator, setVerifikator] = useState("");
   const [activeKode, setActiveKode] = useState(null);
+  const [, forceUpdate] = useState(0);
   const pending = useMemo(() => Object.values(records).filter((r) => r.submitted && !r.verifikasi), [records]);
   const active = activeKode ? records[activeKode] : null;
+  const unlocked = verifikator && unlockStoreApip.isUnlocked(verifikator);
 
   return (
     <div style={{ maxWidth: 560 }}>
@@ -366,9 +368,16 @@ function VerifikasiScreen({ records, apipList, onSubmitVerifikasi }) {
         </Field>
       </div>
 
-      {!verifikator ? (
+      {!verifikator && (
         <div style={{ color: "#9A9788", fontSize: 13.5, padding: "20px 0" }}>Pilih nama Anda dulu untuk mulai memverifikasi.</div>
-      ) : (
+      )}
+
+      {verifikator && !unlocked && (
+        <AccessGate opd={verifikator} onVerifyAccess={onVerifyApipAccess} store={unlockStoreApip}
+          hint="Masukkan PIN Anda untuk mulai memverifikasi." onUnlocked={() => forceUpdate((n) => n + 1)} />
+      )}
+
+      {verifikator && unlocked && (
         <>
           <div style={{ fontSize: 12.5, fontWeight: 600, color: "#7A776C", marginBottom: 10 }}>
             Tindak Lanjut Baru — menunggu verifikasi ({pending.length})
@@ -923,6 +932,11 @@ export default function App() {
     return !!res.valid;
   }
 
+  async function verifyApipAccess(nama, pin) {
+    const res = await apiGet(apiUrl, "verifyApipAccess", { nama, pin });
+    return !!res.valid;
+  }
+
   async function submitProgres(record, patch) {
     await apiPost(apiUrl, "submitProgres", {
       kode_rekomendasi: record.kode,
@@ -1039,7 +1053,7 @@ export default function App() {
                 onSubmitProgres={submitProgres} onVerifyAccess={verifyAccess} onBatalkan={batalkanTindakLanjut} />
             )}
             {tab === "verifikasi" && (
-              <VerifikasiScreen records={records} apipList={apipList} onSubmitVerifikasi={submitVerifikasi} />
+              <VerifikasiScreen records={records} apipList={apipList} onSubmitVerifikasi={submitVerifikasi} onVerifyApipAccess={verifyApipAccess} />
             )}
             {tab === "kamus" && <KamusScreen kamusList={kamusList} />}
           </>
